@@ -3,165 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PulsePlay</title>
+<title>BlueWave Audio</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b1220;
-  color: #eaf3ff;
+:root{
+  --blue:#38bdf8;
+  --blue2:#0ea5e9;
+  --bg:#020617;
+  --card:#020617;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
 }
-
-header {
-  background: linear-gradient(90deg,#4fc3f7,#81d4fa);
-  padding: 16px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+*{box-sizing:border-box;font-family:system-ui,sans-serif}
+body{
+  margin:0;
+  background:#020617;
+  color:var(--text);
 }
-
-.container {
-  padding: 16px;
+header{
+  padding:18px;
+  text-align:center;
+  font-weight:800;
+  font-size:22px;
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#020617;
 }
-
-input {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  font-size: 15px;
-  outline: none;
-  background: #1a2238;
-  color: #fff;
+.player{
+  margin:20px;
+  background:#020617;
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 20px 40px rgba(0,0,0,.5);
+  animation:fade .5s ease;
 }
-
-button {
-  width: 100%;
-  margin-top: 12px;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  background: #4fc3f7;
-  color: #000;
-  font-size: 16px;
-  font-weight: bold;
+@keyframes fade{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:none}
 }
-
-.playlist {
-  margin-top: 20px;
+#frame{
+  width:100%;
+  aspect-ratio:16/9;
+  border-radius:14px;
+  border:none;
 }
-
-.item {
-  background: #1a2238;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 10px;
+.song-title{
+  font-weight:700;
+  font-size:18px;
+  margin-top:10px;
 }
-
-.item small {
-  opacity: 0.7;
+.song-artist{
+  font-size:13px;
+  color:var(--muted);
 }
-
-iframe {
-  width: 100%;
-  height: 120px;
-  border-radius: 12px;
-  border: none;
-  margin-top: 10px;
+.add{
+  margin:20px;
+  display:flex;
+  gap:10px;
 }
-
-.note {
-  opacity: 0.6;
-  font-size: 12px;
-  margin-top: 6px;
+.add input{
+  flex:1;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+}
+.add button{
+  padding:12px 16px;
+  border:none;
+  border-radius:12px;
+  background:var(--blue);
+  font-weight:700;
+  cursor:pointer;
+}
+.playlist{
+  margin:20px;
+}
+.track{
+  padding:14px;
+  border-radius:14px;
+  background:#020617;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:.25s;
+}
+.track:hover{transform:scale(1.02)}
+.track.active{
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#020617;
+}
+.track small{color:var(--muted)}
+.hint{
+  text-align:center;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:30px;
 }
 </style>
 </head>
-
 <body>
 
-<header>PulsePlay</header>
+<header>🌊 BlueWave Audio</header>
 
-<div class="container">
-  <input id="link" placeholder="Tempel link SoundCloud PUBLIC di sini">
-  <button onclick="addSong()">Tambahkan</button>
-  <div class="note">Tekan & tahan lagu untuk menghapus</div>
-
-  <div class="playlist" id="playlist"></div>
+<div class="player">
+  <iframe id="frame" allow="autoplay"></iframe>
+  <div class="song-title" id="title">Belum ada lagu</div>
+  <div class="song-artist" id="artist">Tempel link YouTube / SoundCloud</div>
 </div>
 
+<div class="add">
+  <input id="urlInput" placeholder="Tempel link YouTube atau SoundCloud">
+  <button onclick="addSong()">Tambah</button>
+</div>
+
+<div class="playlist" id="playlist"></div>
+<div class="hint">Klik lagu untuk play • Tekan lama untuk hapus</div>
+
 <script>
-let playlist = [];
+let songs=[];
+let current=-1;
 
-function save() {
-  localStorage.setItem("rockify_blue", JSON.stringify(playlist));
+function isYouTube(url){
+  return url.includes("youtube.com") || url.includes("youtu.be");
+}
+function getYTid(url){
+  let m=url.match(/(youtu\.be\/|v=)([^&]+)/);
+  return m?m[2]:null;
 }
 
-function load() {
-  const data = localStorage.getItem("rockify_blue");
-  if (data) {
-    playlist = JSON.parse(data);
-    render();
+async function addSong(){
+  let url=urlInput.value.trim();
+  if(!url) return;
+
+  let data,embed,type;
+
+  if(isYouTube(url)){
+    let id=getYTid(url);
+    if(!id) return alert("Link YouTube tidak valid");
+    let r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    data=await r.json();
+    embed=`https://www.youtube.com/embed/${id}?autoplay=1`;
+    type="yt";
+  }else{
+    let r=await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
+    data=await r.json();
+    embed=data.html.match(/src="([^"]+)"/)[1];
+    type="sc";
   }
+
+  songs.push({
+    title:data.title,
+    artist:data.author_name,
+    embed,
+    type
+  });
+
+  urlInput.value="";
+  render();
 }
 
-async function addSong() {
-  const url = document.getElementById("link").value.trim();
-  if (!url.includes("soundcloud.com")) {
-    alert("Link SoundCloud tidak valid / tidak publik");
-    return;
-  }
+function render(){
+  playlist.innerHTML="";
+  songs.forEach((s,i)=>{
+    let d=document.createElement("div");
+    d.className="track"+(i===current?" active":"");
+    d.innerHTML=`<b>${s.title}</b><br><small>${s.artist}</small>`;
+    d.onclick=()=>play(i);
 
-  try {
-    const res = await fetch(
-      "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent(url)
-    );
-    const data = await res.json();
-
-    playlist.push({
-      title: data.title,
-      author: data.author_name,
-      embed: data.html
-    });
-
-    save();
-    render();
-    document.getElementById("link").value = "";
-  } catch (e) {
-    alert("Gagal auto detect. Pastikan link PUBLIC & website HTTPS");
-  }
-}
-
-function render() {
-  const el = document.getElementById("playlist");
-  el.innerHTML = "";
-
-  playlist.forEach((song, i) => {
-    const div = document.createElement("div");
-    div.className = "item";
-
-    div.innerHTML = `
-      <strong>${song.title}</strong><br>
-      <small>${song.author}</small>
-      ${song.embed}
-    `;
-
-    // Tekan & tahan / klik kanan → hapus
-    div.oncontextmenu = (e) => {
-      e.preventDefault();
-      if (confirm("Hapus lagu ini?")) {
-        playlist.splice(i, 1);
-        save();
+    let t;
+    d.onmousedown=()=>t=setTimeout(()=>{
+      if(confirm("Hapus lagu ini?")){
+        songs.splice(i,1);
+        if(current===i){frame.src="";current=-1}
         render();
       }
-    };
+    },600);
+    d.onmouseup=()=>clearTimeout(t);
 
-    el.appendChild(div);
+    playlist.appendChild(d);
   });
 }
 
-load();
+function play(i){
+  current=i;
+  frame.src=songs[i].embed;
+  title.textContent=songs[i].title;
+  artist.textContent=songs[i].artist;
+  render();
+}
 </script>
 
 </body>
