@@ -17,22 +17,26 @@
 *{box-sizing:border-box;font-family:system-ui,sans-serif}
 body{
   margin:0;
-  background:#020617;
+  background:var(--bg);
   color:var(--text);
 }
+
+/* HEADER */
 header{
-  padding:18px;
+  padding:16px;
   text-align:center;
   font-weight:800;
   font-size:22px;
   background:linear-gradient(135deg,var(--blue),var(--blue2));
   color:#020617;
 }
+
+/* PLAYER */
 .player{
-  margin:20px;
-  background:#020617;
+  margin:16px;
+  background:var(--card);
   border-radius:18px;
-  padding:16px;
+  padding:14px;
   box-shadow:0 20px 40px rgba(0,0,0,.5);
 }
 #frame{
@@ -43,45 +47,98 @@ header{
 }
 .song-title{font-weight:700;font-size:18px;margin-top:10px}
 .song-artist{font-size:13px;color:var(--muted)}
-.add{
-  margin:20px;
-  display:flex;
-  gap:10px;
-}
-.add input{
-  flex:1;
-  padding:12px;
-  border-radius:12px;
-  border:none;
-}
-.add button{
-  padding:12px 16px;
-  border:none;
-  border-radius:12px;
-  background:var(--blue);
-  font-weight:700;
-  cursor:pointer;
-}
-.playlist{margin:20px}
+
+/* CONTENT */
+.content{padding-bottom:90px}
+.section{margin:16px}
 .track{
   padding:14px;
   border-radius:14px;
   background:#020617;
   margin-bottom:10px;
   cursor:pointer;
-  transition:.25s;
+  transition:.2s;
 }
 .track:hover{transform:scale(1.02)}
+.track small{color:var(--muted)}
 .track.active{
   background:linear-gradient(135deg,var(--blue),var(--blue2));
   color:#020617;
 }
-.track small{color:var(--muted)}
-.hint{
-  text-align:center;
-  font-size:12px;
+
+/* SEARCH */
+.search-box{
+  margin:16px;
+}
+.search-box input{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+}
+
+/* BOTTOM NAV */
+.nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:64px;
+  background:#020617ee;
+  backdrop-filter:blur(8px);
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  border-top:1px solid #0f172a;
+}
+.nav button{
+  background:none;
+  border:none;
   color:var(--muted);
-  margin-bottom:30px;
+  font-size:14px;
+  cursor:pointer;
+}
+.nav button.active{
+  color:var(--blue);
+  font-weight:700;
+}
+
+/* ACTION SHEET */
+.sheet{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:flex-end;
+}
+.sheet.active{display:flex}
+.sheet-box{
+  width:100%;
+  background:#020617;
+  border-radius:20px 20px 0 0;
+  padding:16px;
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
+.sheet-box button{
+  width:100%;
+  padding:14px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:14px;
+  background:#0f172a;
+  color:var(--text);
+  font-size:15px;
+}
+.sheet-box button.primary{
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#020617;
+}
+.sheet-box button.danger{
+  background:#7f1d1d;
 }
 </style>
 </head>
@@ -89,113 +146,172 @@ header{
 
 <header>🌊 Wavefy Music</header>
 
+<!-- PLAYER -->
 <div class="player">
   <iframe id="frame" allow="autoplay"></iframe>
   <div class="song-title" id="title">Belum ada lagu</div>
-  <div class="song-artist" id="artist">Tempel link YouTube / SoundCloud</div>
+  <div class="song-artist" id="artist">Pilih lagu dari Home / Playlist</div>
 </div>
 
-<div class="add">
-  <input id="urlInput" placeholder="Tempel link YouTube atau SoundCloud">
-  <button onclick="addSong()">Tambah</button>
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="section"><b>🔥 Trending</b></div>
+    <div class="section" id="homeList"></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="search" style="display:none">
+    <div class="search-box">
+      <input id="searchInput" placeholder="Cari lagu...">
+    </div>
+    <div class="section" id="searchList"></div>
+  </div>
+
+  <!-- PLAYLIST -->
+  <div id="playlist" style="display:none">
+    <div class="section"><b>🎧 Playlist Kamu</b></div>
+    <div class="section" id="playlistList"></div>
+  </div>
+
 </div>
 
-<div class="playlist" id="playlist"></div>
-<div class="hint">Klik lagu untuk play • Tekan lama untuk hapus</div>
+<!-- BOTTOM NAV -->
+<div class="nav">
+  <button id="navHome" class="active" onclick="switchTab('home')">🏠 Home</button>
+  <button id="navSearch" onclick="switchTab('search')">🔍 Search</button>
+  <button id="navPlaylist" onclick="switchTab('playlist')">📂 Playlist</button>
+</div>
+
+<!-- ACTION SHEET -->
+<div class="sheet" id="sheet">
+  <div class="sheet-box" id="sheetBox"></div>
+</div>
 
 <script>
-let songs = JSON.parse(localStorage.getItem("wavefySongs") || "[]");
-let current = -1;
+// ===== DATA =====
+const defaultSongs = [
+  {title:"Killer Queen", artist:"Queen", url:"https://soundcloud.com/queen-official/killer-queen"},
+  {title:"Monster", artist:"Skillet", url:"https://soundcloud.com/skilletofficial/monster"},
+  {title:"Believer", artist:"Imagine Dragons", url:"https://soundcloud.com/imaginedragons/believer"},
+  {title:"Numb", artist:"Linkin Park", url:"https://soundcloud.com/linkinpark/numb"}
+];
 
-function saveSongs(){
-  localStorage.setItem("wavefySongs", JSON.stringify(songs));
+let userPlaylist = JSON.parse(localStorage.getItem("wavefy_playlist")||"[]");
+let current = null;
+
+// ===== UTIL =====
+async function getEmbed(url){
+  const r = await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
+  const d = await r.json();
+  return {
+    embed:d.html.match(/src="([^"]+)"/)[1],
+    title:d.title,
+    artist:d.author_name
+  };
+}
+function savePlaylist(){
+  localStorage.setItem("wavefy_playlist", JSON.stringify(userPlaylist));
 }
 
-function isYouTube(url){
-  return url.includes("youtube.com") || url.includes("youtu.be");
+// ===== PLAYER =====
+async function playSong(song){
+  const d = await getEmbed(song.url);
+  frame.src = d.embed;
+  title.textContent = d.title;
+  artist.textContent = d.artist;
 }
-function getYTid(url){
-  let m=url.match(/(youtu\.be\/|v=)([^&]+)/);
-  return m?m[2]:null;
+
+// ===== RENDER =====
+function renderHome(){
+  homeList.innerHTML="";
+  defaultSongs.forEach(s=>{
+    homeList.appendChild(trackItem(s,"home"));
+  });
 }
-
-async function addSong(){
-  let url=urlInput.value.trim();
-  if(!url) return;
-
-  let data,embed;
-
-  try{
-    if(isYouTube(url)){
-      let id=getYTid(url);
-      if(!id) return alert("Link YouTube tidak valid");
-      let r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-      data=await r.json();
-      embed=`https://www.youtube.com/embed/${id}?autoplay=1`;
-    }else{
-      let r=await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
-      data=await r.json();
-      embed=data.html.match(/src="([^"]+)"/)[1];
-    }
-
-    songs.push({
-      title:data.title,
-      artist:data.author_name,
-      embed
-    });
-
-    saveSongs();
-    urlInput.value="";
-    render();
-
-  }catch{
-    alert("Gagal ambil data lagu");
+function renderSearch(){
+  const q = searchInput.value.toLowerCase();
+  searchList.innerHTML="";
+  defaultSongs.filter(s=>s.title.toLowerCase().includes(q)||s.artist.toLowerCase().includes(q))
+    .forEach(s=>searchList.appendChild(trackItem(s,"home")));
+}
+function renderPlaylist(){
+  playlistList.innerHTML="";
+  if(userPlaylist.length===0){
+    playlistList.innerHTML="<small style='color:#94a3b8'>Playlist kosong</small>";
+    return;
   }
-}
-
-function render(){
-  playlist.innerHTML="";
-  songs.forEach((s,i)=>{
-    let d=document.createElement("div");
-    d.className="track"+(i===current?" active":"");
-    d.innerHTML=`<b>${s.title}</b><br><small>${s.artist}</small>`;
-
-    d.onclick=()=>play(i);
-
-    let pressTimer;
-    d.addEventListener("pointerdown", ()=>{
-      pressTimer=setTimeout(()=>{
-        if(confirm("Hapus lagu ini?")){
-          songs.splice(i,1);
-          saveSongs();
-          if(current===i){
-            frame.src="";
-            current=-1;
-            title.textContent="Belum ada lagu";
-            artist.textContent="";
-          }
-          render();
-        }
-      },600);
-    });
-    d.addEventListener("pointerup", ()=>clearTimeout(pressTimer));
-    d.addEventListener("pointerleave", ()=>clearTimeout(pressTimer));
-
-    playlist.appendChild(d);
+  userPlaylist.forEach(s=>{
+    playlistList.appendChild(trackItem(s,"playlist"));
   });
 }
 
-function play(i){
-  current=i;
-  frame.src=songs[i].embed;
-  title.textContent=songs[i].title;
-  artist.textContent=songs[i].artist;
-  render();
+function trackItem(song, type){
+  const d=document.createElement("div");
+  d.className="track";
+  d.innerHTML=`<b>${song.title}</b><br><small>${song.artist}</small>`;
+  d.onclick=()=>playSong(song);
+
+  let timer;
+  d.addEventListener("pointerdown",()=>{
+    timer=setTimeout(()=>openSheet(song,type),600);
+  });
+  d.addEventListener("pointerup",()=>clearTimeout(timer));
+  d.addEventListener("pointerleave",()=>clearTimeout(timer));
+  return d;
 }
 
-// auto load
-render();
+// ===== ACTION SHEET =====
+function openSheet(song,type){
+  sheetBox.innerHTML="";
+  if(type==="home"){
+    sheetBox.innerHTML=`
+      <button class="primary">➕ Tambah ke Playlist</button>
+      <button onclick="closeSheet()">❌ Batal</button>`;
+    sheetBox.querySelector(".primary").onclick=()=>{
+      if(!userPlaylist.find(s=>s.url===song.url)){
+        userPlaylist.push(song);
+        savePlaylist();
+      }
+      closeSheet();
+    };
+  }else{
+    sheetBox.innerHTML=`
+      <button class="danger">🗑 Hapus dari Playlist</button>
+      <button onclick="closeSheet()">❌ Batal</button>`;
+    sheetBox.querySelector(".danger").onclick=()=>{
+      userPlaylist=userPlaylist.filter(s=>s.url!==song.url);
+      savePlaylist();
+      renderPlaylist();
+      closeSheet();
+    };
+  }
+  sheet.classList.add("active");
+}
+function closeSheet(){sheet.classList.remove("active")}
+
+// ===== NAV =====
+function switchTab(tab){
+  home.style.display=tab==="home"?"block":"none";
+  search.style.display=tab==="search"?"block":"none";
+  playlist.style.display=tab==="playlist"?"block":"none";
+
+  navHome.classList.toggle("active",tab==="home");
+  navSearch.classList.toggle("active",tab==="search");
+  navPlaylist.classList.toggle("active",tab==="playlist");
+
+  if(tab==="playlist") renderPlaylist();
+}
+
+// ===== EVENTS =====
+searchInput.oninput=renderSearch;
+
+// ===== INIT =====
+renderHome();
+renderSearch();
 </script>
 
 </body>
-  </html>
+        </html>
