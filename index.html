@@ -34,11 +34,6 @@ header{
   border-radius:18px;
   padding:16px;
   box-shadow:0 20px 40px rgba(0,0,0,.5);
-  animation:fade .5s ease;
-}
-@keyframes fade{
-  from{opacity:0;transform:translateY(20px)}
-  to{opacity:1;transform:none}
 }
 #frame{
   width:100%;
@@ -46,15 +41,8 @@ header{
   border-radius:14px;
   border:none;
 }
-.song-title{
-  font-weight:700;
-  font-size:18px;
-  margin-top:10px;
-}
-.song-artist{
-  font-size:13px;
-  color:var(--muted);
-}
+.song-title{font-weight:700;font-size:18px;margin-top:10px}
+.song-artist{font-size:13px;color:var(--muted)}
 .add{
   margin:20px;
   display:flex;
@@ -74,9 +62,7 @@ header{
   font-weight:700;
   cursor:pointer;
 }
-.playlist{
-  margin:20px;
-}
+.playlist{margin:20px}
 .track{
   padding:14px;
   border-radius:14px;
@@ -118,8 +104,12 @@ header{
 <div class="hint">Klik lagu untuk play • Tekan lama untuk hapus</div>
 
 <script>
-let songs=[];
-let current=-1;
+let songs = JSON.parse(localStorage.getItem("wavefySongs") || "[]");
+let current = -1;
+
+function saveSongs(){
+  localStorage.setItem("wavefySongs", JSON.stringify(songs));
+}
 
 function isYouTube(url){
   return url.includes("youtube.com") || url.includes("youtu.be");
@@ -133,31 +123,34 @@ async function addSong(){
   let url=urlInput.value.trim();
   if(!url) return;
 
-  let data,embed,type;
+  let data,embed;
 
-  if(isYouTube(url)){
-    let id=getYTid(url);
-    if(!id) return alert("Link YouTube tidak valid");
-    let r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
-    data=await r.json();
-    embed=`https://www.youtube.com/embed/${id}?autoplay=1`;
-    type="yt";
-  }else{
-    let r=await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
-    data=await r.json();
-    embed=data.html.match(/src="([^"]+)"/)[1];
-    type="sc";
+  try{
+    if(isYouTube(url)){
+      let id=getYTid(url);
+      if(!id) return alert("Link YouTube tidak valid");
+      let r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+      data=await r.json();
+      embed=`https://www.youtube.com/embed/${id}?autoplay=1`;
+    }else{
+      let r=await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
+      data=await r.json();
+      embed=data.html.match(/src="([^"]+)"/)[1];
+    }
+
+    songs.push({
+      title:data.title,
+      artist:data.author_name,
+      embed
+    });
+
+    saveSongs();
+    urlInput.value="";
+    render();
+
+  }catch{
+    alert("Gagal ambil data lagu");
   }
-
-  songs.push({
-    title:data.title,
-    artist:data.author_name,
-    embed,
-    type
-  });
-
-  urlInput.value="";
-  render();
 }
 
 function render(){
@@ -166,17 +159,27 @@ function render(){
     let d=document.createElement("div");
     d.className="track"+(i===current?" active":"");
     d.innerHTML=`<b>${s.title}</b><br><small>${s.artist}</small>`;
+
     d.onclick=()=>play(i);
 
-    let t;
-    d.onmousedown=()=>t=setTimeout(()=>{
-      if(confirm("Hapus lagu ini?")){
-        songs.splice(i,1);
-        if(current===i){frame.src="";current=-1}
-        render();
-      }
-    },600);
-    d.onmouseup=()=>clearTimeout(t);
+    let pressTimer;
+    d.addEventListener("pointerdown", ()=>{
+      pressTimer=setTimeout(()=>{
+        if(confirm("Hapus lagu ini?")){
+          songs.splice(i,1);
+          saveSongs();
+          if(current===i){
+            frame.src="";
+            current=-1;
+            title.textContent="Belum ada lagu";
+            artist.textContent="";
+          }
+          render();
+        }
+      },600);
+    });
+    d.addEventListener("pointerup", ()=>clearTimeout(pressTimer));
+    d.addEventListener("pointerleave", ()=>clearTimeout(pressTimer));
 
     playlist.appendChild(d);
   });
@@ -189,7 +192,10 @@ function play(i){
   artist.textContent=songs[i].artist;
   render();
 }
+
+// auto load
+render();
 </script>
 
 </body>
-</html>
+  </html>
