@@ -15,228 +15,187 @@
   --muted:#94a3b8;
 }
 *{box-sizing:border-box;font-family:system-ui,sans-serif}
-body{margin:0;background:var(--bg);color:var(--text)}
-
+body{
+  margin:0;
+  background:#020617;
+  color:var(--text);
+}
 header{
-  padding:16px;text-align:center;font-weight:800;font-size:22px;
+  padding:18px;
+  text-align:center;
+  font-weight:800;
+  font-size:22px;
   background:linear-gradient(135deg,var(--blue),var(--blue2));
   color:#020617;
 }
-
 .player{
-  margin:16px;background:var(--card);border-radius:18px;padding:14px;
+  margin:20px;
+  background:#020617;
+  border-radius:18px;
+  padding:16px;
   box-shadow:0 20px 40px rgba(0,0,0,.5);
+}
+#frame{
+  width:100%;
+  aspect-ratio:16/9;
+  border-radius:14px;
+  border:none;
 }
 .song-title{font-weight:700;font-size:18px;margin-top:10px}
 .song-artist{font-size:13px;color:var(--muted)}
-audio{width:100%;margin-top:10px}
-
-.content{padding-bottom:90px}
-.section{margin:16px}
+.add{
+  margin:20px;
+  display:flex;
+  gap:10px;
+}
+.add input{
+  flex:1;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+}
+.add button{
+  padding:12px 16px;
+  border:none;
+  border-radius:12px;
+  background:var(--blue);
+  font-weight:700;
+  cursor:pointer;
+}
+.playlist{margin:20px}
 .track{
-  padding:14px;border-radius:14px;background:#020617;margin-bottom:10px;
-  cursor:pointer;transition:.2s
+  padding:14px;
+  border-radius:14px;
+  background:#020617;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:.25s;
 }
 .track:hover{transform:scale(1.02)}
 .track.active{
   background:linear-gradient(135deg,var(--blue),var(--blue2));
-  color:#020617
+  color:#020617;
 }
 .track small{color:var(--muted)}
-
-.search-box{margin:16px}
-.search-box input{
-  width:100%;padding:12px;border-radius:12px;border:none
+.hint{
+  text-align:center;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:30px;
 }
-
-.nav{
-  position:fixed;bottom:0;left:0;right:0;height:64px;
-  background:#020617ee;display:flex;justify-content:space-around;
-  align-items:center;border-top:1px solid #0f172a
-}
-.nav button{
-  background:none;border:none;color:var(--muted);font-size:14px
-}
-.nav button.active{color:var(--blue);font-weight:700}
-
-.sheet{
-  position:fixed;inset:0;background:rgba(0,0,0,.5);
-  display:none;align-items:flex-end
-}
-.sheet.active{display:flex}
-.sheet-box{
-  width:100%;background:#020617;border-radius:20px 20px 0 0;
-  padding:16px
-}
-.sheet-box button{
-  width:100%;padding:14px;margin-bottom:10px;border:none;
-  border-radius:14px;background:#0f172a;color:var(--text)
-}
-.sheet-box .primary{
-  background:linear-gradient(135deg,var(--blue),var(--blue2));
-  color:#020617
-}
-.sheet-box .danger{background:#7f1d1d}
 </style>
 </head>
-
 <body>
 
 <header>🌊 Wavefy Music</header>
 
 <div class="player">
-  <audio id="audio" controls></audio>
+  <iframe id="frame" allow="autoplay"></iframe>
   <div class="song-title" id="title">Belum ada lagu</div>
-  <div class="song-artist" id="artist">Pilih lagu</div>
+  <div class="song-artist" id="artist">Tempel link YouTube / SoundCloud</div>
 </div>
 
-<div class="content">
-  <div id="home">
-    <div class="section"><b>🔥 Trending</b></div>
-    <div class="section" id="homeList"></div>
-  </div>
-
-  <div id="search" style="display:none">
-    <div class="search-box">
-      <input id="searchInput" placeholder="Cari lagu...">
-    </div>
-    <div class="section" id="searchList"></div>
-  </div>
-
-  <div id="playlist" style="display:none">
-    <div class="section"><b>🎧 Playlist Kamu</b></div>
-    <div class="section" id="playlistList"></div>
-  </div>
+<div class="add">
+  <input id="urlInput" placeholder="Tempel link YouTube atau SoundCloud">
+  <button onclick="addSong()">Tambah</button>
 </div>
 
-<div class="nav">
-  <button id="navHome" class="active" onclick="switchTab('home')">🏠 Home</button>
-  <button id="navSearch" onclick="switchTab('search')">🔍 Search</button>
-  <button id="navPlaylist" onclick="switchTab('playlist')">📂 Playlist</button>
-</div>
-
-<div class="sheet" id="sheet">
-  <div class="sheet-box" id="sheetBox"></div>
-</div>
+<div class="playlist" id="playlist"></div>
+<div class="hint">Klik lagu untuk play • Tekan lama untuk hapus</div>
 
 <script>
-// ===== 30 LEGAL AUDIO SONGS =====
-const defaultSongs = [
- {title:"Night Walker",artist:"FASSounds",url:"https://cdn.pixabay.com/audio/2022/03/15/audio_65c4d44b14.mp3"},
- {title:"Deep Blue",artist:"Penguinmusic",url:"https://cdn.pixabay.com/audio/2022/11/03/audio_6c2b8f94f7.mp3"},
- {title:"Epic Cinematic",artist:"FASSounds",url:"https://cdn.pixabay.com/audio/2022/10/09/audio_946b7a3c47.mp3"},
- {title:"Dark Ambient",artist:"FASSounds",url:"https://cdn.pixabay.com/audio/2022/08/01/audio_1c4a6c3f9a.mp3"},
- {title:"Cyberpunk Action",artist:"AlexGrohl",url:"https://cdn.pixabay.com/audio/2023/03/28/audio_3d1b4f2e71.mp3"},
- {title:"Lofi Chill",artist:"Lofi Hour",url:"https://cdn.pixabay.com/audio/2022/01/18/audio_8c8c0f6b77.mp3"},
- {title:"Lofi Night",artist:"Lofi Hour",url:"https://cdn.pixabay.com/audio/2022/02/23/audio_2cbdc43d6f.mp3"},
- {title:"Sad Piano",artist:"Lesfm",url:"https://cdn.pixabay.com/audio/2022/03/09/audio_7c1d4a9f2e.mp3"},
- {title:"Inspirational",artist:"Lesfm",url:"https://cdn.pixabay.com/audio/2022/04/27/audio_5f3a8a9f2c.mp3"},
- {title:"Future Bass",artist:"NCS Style",url:"https://cdn.pixabay.com/audio/2022/05/06/audio_4c7b92d3a1.mp3"},
- {title:"Chill Trap",artist:"AlexGrohl",url:"https://cdn.pixabay.com/audio/2023/01/30/audio_6d98fbc2c1.mp3"},
- {title:"Gaming Beat",artist:"ComaStudio",url:"https://cdn.pixabay.com/audio/2022/06/14/audio_99c44b1fa7.mp3"},
- {title:"Action Rock",artist:"ComaStudio",url:"https://cdn.pixabay.com/audio/2022/09/12/audio_1f9c6318f1.mp3"},
- {title:"Neon Drive",artist:"AlexGrohl",url:"https://cdn.pixabay.com/audio/2023/04/01/audio_9a0c9f5c7a.mp3"},
- {title:"Dreamscape",artist:"Penguinmusic",url:"https://cdn.pixabay.com/audio/2022/07/06/audio_3b7d9c1a2f.mp3"},
- {title:"Night City",artist:"FASSounds",url:"https://cdn.pixabay.com/audio/2022/08/21/audio_1f2b8d9e6c.mp3"},
- {title:"Dark Pulse",artist:"AlexGrohl",url:"https://cdn.pixabay.com/audio/2023/02/11/audio_7f2a9c3e1b.mp3"},
- {title:"Ambient Flow",artist:"Lesfm",url:"https://cdn.pixabay.com/audio/2022/05/19/audio_6a7c2f1b8d.mp3"},
- {title:"Synthwave",artist:"ComaStudio",url:"https://cdn.pixabay.com/audio/2022/10/18/audio_8b1c7a9e2f.mp3"},
- {title:"Relax Beats",artist:"Lofi Hour",url:"https://cdn.pixabay.com/audio/2022/12/01/audio_4d2b9a7f1c.mp3"}
-];
+let songs = JSON.parse(localStorage.getItem("wavefySongs") || "[]");
+let current = -1;
 
-let userPlaylist = JSON.parse(localStorage.getItem("wavefy_playlist")||"[]");
-let currentSong=null;
-
-// ===== PLAYER =====
-function playSong(song){
-  currentSong=song;
-  audio.src=song.url;
-  audio.play();
-  title.textContent=song.title;
-  artist.textContent=song.artist;
-  highlight();
+function saveSongs(){
+  localStorage.setItem("wavefySongs", JSON.stringify(songs));
 }
 
-function highlight(){
-  document.querySelectorAll(".track").forEach(t=>{
-    t.classList.toggle("active",t.dataset.url===currentSong?.url);
+function isYouTube(url){
+  return url.includes("youtube.com") || url.includes("youtu.be");
+}
+function getYTid(url){
+  let m=url.match(/(youtu\.be\/|v=)([^&]+)/);
+  return m?m[2]:null;
+}
+
+async function addSong(){
+  let url=urlInput.value.trim();
+  if(!url) return;
+
+  let data,embed;
+
+  try{
+    if(isYouTube(url)){
+      let id=getYTid(url);
+      if(!id) return alert("Link YouTube tidak valid");
+      let r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+      data=await r.json();
+      embed=`https://www.youtube.com/embed/${id}?autoplay=1`;
+    }else{
+      let r=await fetch(`https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(url)}`);
+      data=await r.json();
+      embed=data.html.match(/src="([^"]+)"/)[1];
+    }
+
+    songs.push({
+      title:data.title,
+      artist:data.author_name,
+      embed
+    });
+
+    saveSongs();
+    urlInput.value="";
+    render();
+
+  }catch{
+    alert("Gagal ambil data lagu");
+  }
+}
+
+function render(){
+  playlist.innerHTML="";
+  songs.forEach((s,i)=>{
+    let d=document.createElement("div");
+    d.className="track"+(i===current?" active":"");
+    d.innerHTML=`<b>${s.title}</b><br><small>${s.artist}</small>`;
+
+    d.onclick=()=>play(i);
+
+    let pressTimer;
+    d.addEventListener("pointerdown", ()=>{
+      pressTimer=setTimeout(()=>{
+        if(confirm("Hapus lagu ini?")){
+          songs.splice(i,1);
+          saveSongs();
+          if(current===i){
+            frame.src="";
+            current=-1;
+            title.textContent="Belum ada lagu";
+            artist.textContent="";
+          }
+          render();
+        }
+      },600);
+    });
+    d.addEventListener("pointerup", ()=>clearTimeout(pressTimer));
+    d.addEventListener("pointerleave", ()=>clearTimeout(pressTimer));
+
+    playlist.appendChild(d);
   });
 }
 
-// ===== RENDER =====
-function createItem(song,type){
-  const d=document.createElement("div");
-  d.className="track";
-  d.dataset.url=song.url;
-  d.innerHTML=`<b>${song.title}</b><br><small>${song.artist}</small>`;
-  d.onclick=()=>playSong(song);
-
-  let t;
-  d.onpointerdown=()=>t=setTimeout(()=>openSheet(song,type),600);
-  d.onpointerup=()=>clearTimeout(t);
-  d.onpointerleave=()=>clearTimeout(t);
-  return d;
+function play(i){
+  current=i;
+  frame.src=songs[i].embed;
+  title.textContent=songs[i].title;
+  artist.textContent=songs[i].artist;
+  render();
 }
 
-function renderHome(){
-  homeList.innerHTML="";
-  defaultSongs.forEach(s=>homeList.appendChild(createItem(s,"home")));
-}
-function renderSearch(){
-  const q=searchInput.value.toLowerCase();
-  searchList.innerHTML="";
-  defaultSongs.filter(s=>s.title.toLowerCase().includes(q)||s.artist.toLowerCase().includes(q))
-    .forEach(s=>searchList.appendChild(createItem(s,"home")));
-}
-function renderPlaylist(){
-  playlistList.innerHTML="";
-  if(!userPlaylist.length){
-    playlistList.innerHTML="<small style='color:#94a3b8'>Playlist kosong</small>";
-    return;
-  }
-  userPlaylist.forEach(s=>playlistList.appendChild(createItem(s,"playlist")));
-}
-
-// ===== ACTION SHEET =====
-function openSheet(song,type){
-  sheetBox.innerHTML="";
-  if(type==="home"){
-    sheetBox.innerHTML=`<button class="primary">➕ Tambah ke Playlist</button>
-    <button onclick="closeSheet()">❌ Batal</button>`;
-    sheetBox.querySelector(".primary").onclick=()=>{
-      if(!userPlaylist.find(s=>s.url===song.url)){
-        userPlaylist.push(song);
-        localStorage.setItem("wavefy_playlist",JSON.stringify(userPlaylist));
-      }
-      closeSheet();
-    };
-  }else{
-    sheetBox.innerHTML=`<button class="danger">🗑 Hapus dari Playlist</button>
-    <button onclick="closeSheet()">❌ Batal</button>`;
-    sheetBox.querySelector(".danger").onclick=()=>{
-      userPlaylist=userPlaylist.filter(s=>s.url!==song.url);
-      localStorage.setItem("wavefy_playlist",JSON.stringify(userPlaylist));
-      renderPlaylist();closeSheet();
-    };
-  }
-  sheet.classList.add("active");
-}
-function closeSheet(){sheet.classList.remove("active")}
-
-// ===== NAV =====
-function switchTab(t){
-  home.style.display=t==="home"?"block":"none";
-  search.style.display=t==="search"?"block":"none";
-  playlist.style.display=t==="playlist"?"block":"none";
-  navHome.classList.toggle("active",t==="home");
-  navSearch.classList.toggle("active",t==="search");
-  navPlaylist.classList.toggle("active",t==="playlist");
-  if(t==="playlist")renderPlaylist();
-}
-
-searchInput.oninput=renderSearch;
-renderHome();renderSearch();
+// auto load
+render();
 </script>
 
 </body>
-  </html>
+</html>
