@@ -104,7 +104,29 @@ header{
 <div class="hint">Klik lagu untuk play • Tekan lama untuk hapus</div>
 
 <script>
-let songs = JSON.parse(localStorage.getItem("wavefySongs") || "[]");
+/* =========================
+   DEFAULT EMBEDDED SONGS
+   =========================
+   👉 GANTI / TAMBAH LAGU DI SINI
+*/
+const defaultSongs = [
+  {
+    title: "Bohemian Rhapsody",
+    artist: "Queen",
+    embed: "https://m.soundcloud.com/patmyers/bohemian-rhapsody"
+  }
+];
+
+/* =========================
+   LOAD SONGS
+   ========================= */
+let songs = JSON.parse(localStorage.getItem("wavefySongs"));
+
+if (!songs || songs.length === 0) {
+  songs = defaultSongs;
+  localStorage.setItem("wavefySongs", JSON.stringify(songs));
+}
+
 let current = -1;
 
 function saveSongs(){
